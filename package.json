@@ -1,0 +1,9 @@
+{
+  "name": "date-spot-collector",
+  "version": "1.0.0",
+  "private": true,
+  "description": "貼上 IG 貼文 → 分析風格與約會適合度 → 用 Google Places 找咖啡廳/餐廳/公園 → 排出一條約會路線",
+  "engines": {
+    "node": ">=18"
+  }
+}

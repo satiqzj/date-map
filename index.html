@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>約會地圖 · IG 地點蒐集 + 路線規劃</title>
+<style>
+  :root {
+    --bg: #fbf6f7;
+    --card: #ffffff;
+    --ink: #2c2730;
+    --muted: #8d8390;
+    --accent: #d4548a;
+    --accent-soft: #fdeaf1;
+    --line: #efe6ea;
+    --good: #3e9c6a;
+    --gold: #e0a93b;
+    --shadow: 0 4px 18px rgba(70, 40, 55, 0.08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: "Segoe UI", "Microsoft JhengHei", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--ink);
+    line-height: 1.55;
+  }
+  header { text-align: center; padding: 32px 16px 8px; }
+  header h1 { margin: 0; font-size: 27px; letter-spacing: 1px; }
+  header p { margin: 6px 0 0; color: var(--muted); font-size: 14px; }
+  .wrap { max-width: 920px; margin: 0 auto; padding: 16px; display: grid; gap: 20px; }
+  @media (min-width: 780px) { .wrap { grid-template-columns: 1fr 1fr; } }
+  .card {
+    background: var(--card); border: 1px solid var(--line);
+    border-radius: 16px; padding: 20px; box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 6px; font-size: 18px; display: flex; align-items: center; gap: 8px; }
+  .card .hint { font-size: 12px; color: var(--muted); margin: 0 0 12px; }
+  .span2 { grid-column: 1 / -1; }
+  label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
+  input, select, textarea {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--line);
+    border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; color: var(--ink);
+  }
+  input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 110px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  button {
+    cursor: pointer; border: none; border-radius: 10px; padding: 11px 16px;
+    font-size: 14px; font-weight: 600; font-family: inherit;
+    background: var(--accent); color: #fff; transition: filter .15s;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:disabled { opacity: .55; cursor: not-allowed; }
+  button.ghost { background: var(--accent-soft); color: var(--accent); }
+  button.mini { padding: 5px 10px; font-size: 12px; font-weight: 600; border-radius: 8px; }
+  .full { width: 100%; margin-top: 14px; }
+  .seg { display: flex; gap: 8px; margin-top: 4px; }
+  .seg button { flex: 1; background: var(--accent-soft); color: var(--accent); }
+  .seg button.on { background: var(--accent); color: #fff; }
+  .item {
+    border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
+    margin-top: 10px; background: #fffdfe;
+  }
+  .item .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .item .name { font-weight: 700; font-size: 15px; }
+  .item .name a { color: var(--ink); text-decoration: none; }
+  .item .name a:hover { color: var(--accent); }
+  .item .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .item .reason { font-size: 13px; margin-top: 5px; color: #5a5460; }
+  .tag {
+    display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
+    background: var(--accent-soft); color: var(--accent); margin-right: 6px; margin-top: 4px;
+  }
+  .tag.cat { background: #eef0f5; color: #5d6b88; }
+  .score { font-weight: 700; font-size: 13px; color: var(--gold); white-space: nowrap; }
+  .dist { color: var(--good); font-weight: 600; font-size: 12px; white-space: nowrap; }
+  .actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
+  .del { background: none; color: var(--muted); padding: 2px 6px; font-size: 12px; font-weight: 400; }
+  .del:hover { color: #c0392b; }
+  .status { font-size: 13px; color: var(--muted); margin-top: 10px; min-height: 18px; }
+  .empty { color: var(--muted); font-size: 13px; text-align: center; padding: 18px 0; }
+  .route-stop { border-left: 3px solid var(--accent); padding: 4px 0 8px 14px; margin-left: 6px; position: relative; }
+  .route-stop::before {
+    content: ""; position: absolute; left: -7px; top: 7px; width: 11px; height: 11px;
+    border-radius: 50%; background: var(--accent);
+  }
+  .route-stop .rname { font-weight: 700; }
+  .route-stop .rrole { font-size: 11px; color: var(--accent); margin-left: 6px; }
+  .route-stop .rbody { font-size: 13px; color: #5a5460; margin-top: 2px; }
+  .route-stop .rtip { font-size: 12px; color: var(--muted); margin-top: 2px; }
+  .narr { font-size: 13.5px; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
+  footer { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 16px 32px; }
+  footer a { color: var(--accent); }
+</style>
+</head>
+<body>
+<header>
+  <h1>💕 約會地圖</h1>
+  <p>貼上 IG 貼文 → 分析風格與約會適合度 → 找周邊咖啡廳/餐廳/公園 → 排出一條約會路線</p>
+</header>
+
+<div class="wrap">
+  <!-- ===== 0. IG 監看精選（自動讀監看器） ===== -->
+  <section class="card span2">
+    <h2>📡 今天的 IG 精選</h2>
+    <p class="hint">自動讀取你的 IG 監看器每天整理好的地點。按「加入清單」就能排進約會路線，不用再複製貼上。</p>
+    <button class="ghost full" id="feedBtn" onclick="loadFeed()">🔄 重新整理</button>
+    <div class="status" id="feedStatus"></div>
+    <div id="feedList"></div>
+  </section>
+
+  <!-- ===== 1. IG 貼文分析 ===== -->
+  <section class="card span2">
+    <h2>📋 貼上 IG 貼文，分析約會適合度</h2>
+    <p class="hint">把你在 IG 上看到的活動／展覽／市集／咖啡廳貼文文字（含 hashtag、地點名、心得）整段貼進來，可一次貼多則。</p>
+    <textarea id="ig-text" placeholder="例如：
+今天去了 @somecafe 好chill 的老宅咖啡廳，午後陽光超美 #台北咖啡 #約會
+還有華山的「光影沉浸展」～燈光超浪漫 適合慢慢逛
+週末松菸有質感市集，文青小物很多"></textarea>
+    <button class="full" id="analyzeBtn" onclick="analyze()">✨ 分析這些地點</button>
+    <div class="status" id="analyzeStatus"></div>
+    <div id="analyzeList"></div>
+  </section>
+
+  <!-- ===== 2. Google Places 找周邊 ===== -->
+  <section class="card">
+    <h2>📍 找周邊地點</h2>
+    <p class="hint">用 Google 地圖搜尋附近的咖啡廳、餐廳或公園，補進你的約會清單。</p>
+    <button class="ghost full" id="locBtn" onclick="getLocation()">使用我目前的位置</button>
+    <div class="status" id="locStatus">尚未定位（也可直接在下方輸入地區關鍵字）</div>
+    <label>資料來源</label>
+    <select id="src">
+      <option value="osm">OpenStreetMap（免費，免金鑰）</option>
+      <option value="google">Google Places（需金鑰，有評分／營業中）</option>
+    </select>
+    <label>地區關鍵字（選填，Google 模式沒定位時用）</label>
+    <input id="area-q" placeholder="例如：台北 信義區 / 台中 審計新村">
+    <label>想找什麼</label>
+    <div class="seg" id="kindSeg">
+      <button class="on" data-kind="cafe" onclick="setKind(this)">☕ 咖啡廳</button>
+      <button data-kind="restaurant" onclick="setKind(this)">🍽️ 餐廳</button>
+      <button data-kind="park" onclick="setKind(this)">🌳 公園</button>
+    </div>
+    <label>搜尋範圍：<span id="radiusLabel">1.5</span> 公里</label>
+    <input id="radius" type="range" min="300" max="5000" step="100" value="1500"
+           oninput="document.getElementById('radiusLabel').textContent=(this.value/1000).toFixed(1)">
+    <button class="full" id="findBtn" onclick="findPlaces()">搜尋</button>
+    <div class="status" id="findStatus"></div>
+    <div id="placesList"></div>
+  </section>
+
+  <!-- ===== 3. 收藏清單 ===== -->
+  <section class="card">
+    <h2>🗂️ 我的約會清單 <span id="count" class="meta"></span></h2>
+    <p class="hint">勾選好地點後，按下方排出一條順暢的約會路線。</p>
+    <div id="collectionList"></div>
+    <button class="full" id="routeBtn" onclick="planRoute()">🗺️ 排一條約會路線</button>
+    <div class="status" id="routeStatus"></div>
+  </section>
+
+  <!-- ===== 路線結果 ===== -->
+  <section class="card span2" id="routeCard" style="display:none">
+    <h2>🌹 你的約會路線</h2>
+    <div id="routeResult"></div>
+  </section>
+</div>
+
+<footer>
+  資料儲存在你的瀏覽器本機 · 地點來自 Google Places · 風格分析由 Claude 提供（未設金鑰時改用本機關鍵字推測）<br>
+  💡 IG 沒有公開的貼文擷取 API，所以是「你貼上內容、AI 幫你整理」的方式運作。
+</footer>
+
+<script>
+// ============ 收藏（localStorage） ============
+const KEY = "date-collection-v1";
+let collection = JSON.parse(localStorage.getItem(KEY) || "[]");
+function save() { localStorage.setItem(KEY, JSON.stringify(collection)); }
+function esc(s) { return (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+function inCollection(name) { return collection.some(c => c.name === name); }
+
+// 加入收藏（避免重複）。spot: {name, category, vibe_tags, date_score, reason, area, lat, lng, mapUri, rating}
+function addToCollection(spot) {
+  if (inCollection(spot.name)) { renderCollection(); return; }
+  collection.push(spot);
+  save();
+  renderCollection();
+}
+function removeFromCollection(name) {
+  collection = collection.filter(c => c.name !== name);
+  save();
+  renderCollection();
+  renderAnalyze();   // 重畫，讓「加入」按鈕狀態同步
+  renderPlaces();
+  renderFeed();
+}
+
+function igTagLink(name) {
+  const tag = (name || "").replace(/[^\p{L}\p{N}]/gu, "");
+  return "https://www.instagram.com/explore/tags/" + encodeURIComponent(tag);
+}
+function scoreStr(n) { return "約會指數 " + n + "/10"; }
+
+// ============ 1. IG 貼文分析 ============
+let analyzed = [];   // 最近一次分析結果
+
+async function analyze() {
+  const text = document.getElementById("ig-text").value.trim();
+  const status = document.getElementById("analyzeStatus");
+  const btn = document.getElementById("analyzeBtn");
+  if (!text) { status.textContent = "請先貼上一些 IG 貼文文字。"; return; }
+
+  btn.disabled = true; status.textContent = "分析中…（首次可能需要幾秒）";
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "analyze", text }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error((data.error && data.error.message) || ("HTTP " + res.status));
+    analyzed = (data.spots || []).sort((a, b) => (b.date_score||0) - (a.date_score||0));
+    status.textContent = `分析出 ${analyzed.length} 個地點，依約會指數排序：`;
+  } catch (e) {
+    // 後端沒金鑰或失敗 → 改用本機關鍵字推測
+    analyzed = heuristicAnalyze(text);
+    status.textContent = `（離線推測模式）整理出 ${analyzed.length} 個地點。若要更準的風格分析，請在後端設定 ANTHROPIC_API_KEY。`;
+  } finally {
+    btn.disabled = false;
+    renderAnalyze();
+  }
+}
+
+// 沒有 AI 金鑰時的簡易推測：逐行抓地點名，用關鍵字猜分類與風格
+function heuristicAnalyze(text) {
+  const CAT = [
+    [/咖啡|cafe|café|coffee/i, "咖啡廳"],
+    [/展|gallery|museum|美術|藝術/i, "展覽"],
+    [/市集|market|園遊/i, "市集"],
+    [/公園|park|步道|河濱|植物園/i, "景點"],
+    [/餐廳|restaurant|bistro|食堂|料理/i, "餐廳"],
+  ];
+  const VIBE = [
+    [/老宅|文青|質感|選物|書/i, "文青"],
+    [/浪漫|燈光|夜景|微醺|情調/i, "浪漫"],
+    [/戶外|河濱|步道|草地|陽光/i, "戶外"],
+    [/熱鬧|人潮|市集|夜市/i, "熱鬧"],
+    [/安靜|靜謐|隱密|chill/i, "靜謐"],
+  ];
+  return text.split(/\n+/).map(l => l.trim()).filter(l => l.length > 1).map(line => {
+    let category = "其他";
+    for (const [re, c] of CAT) if (re.test(line)) { category = c; break; }
+    const vibe_tags = VIBE.filter(([re]) => re.test(line)).map(([, t]) => t);
+    if (!vibe_tags.length) vibe_tags.push("待確認");
+    // 取一個較像名稱的片段：去掉 hashtag 後的前半句
+    const name = line.replace(/#\S+/g, "").replace(/^[@＠]\S+\s*/, "").split(/[，。,!！?？~～]/)[0].trim().slice(0, 24) || line.slice(0, 24);
+    return { name, category, vibe_tags, date_score: 7, reason: "（離線推測，未經 AI 分析）", best_time: "", location_hint: "" };
+  });
+}
+
+function renderAnalyze() {
+  const el = document.getElementById("analyzeList");
+  if (!analyzed.length) { el.innerHTML = ""; return; }
+  el.innerHTML = analyzed.map((s, i) => {
+    const added = inCollection(s.name);
+    const tags = (s.vibe_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+    return `
+      <div class="item">
+        <div class="top">
+          <span class="name">${esc(s.name)}</span>
+          <span class="score">${scoreStr(s.date_score || "?")}</span>
+        </div>
+        <div class="meta">
+          <span class="tag cat">${esc(s.category || "其他")}</span>${tags}
+          ${s.best_time ? `<span class="tag cat">⏰ ${esc(s.best_time)}</span>` : ""}
+        </div>
+        ${s.reason ? `<div class="reason">${esc(s.reason)}</div>` : ""}
+        <div class="actions">
+          <button class="mini" onclick="addAnalyzed(${i})" ${added ? "disabled" : ""}>${added ? "✓ 已收藏" : "＋ 加入清單"}</button>
+          <button class="mini ghost" onclick="locateAnalyzed(${i}, this)">🔎 Google 定位</button>
+          <a class="mini ghost" style="text-decoration:none;display:inline-block" href="${igTagLink(s.name)}" target="_blank" rel="noopener">＃ 看 IG</a>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function addAnalyzed(i) {
+  const s = analyzed[i];
+  addToCollection({
+    name: s.name, category: s.category, vibe_tags: s.vibe_tags,
+    date_score: s.date_score, reason: s.reason, area: s.location_hint || "",
+  });
+  renderAnalyze();
+}
+
+// 用 Google 定位這個分析出的地點：補上座標、評分、地圖連結
+async function locateAnalyzed(i, btn) {
+  const s = analyzed[i];
+  btn.disabled = true; btn.textContent = "定位中…";
+  try {
+    const place = await searchOnePlace(s.name + " " + (s.location_hint || ""));
+    if (!place) { btn.textContent = "找不到"; setTimeout(() => { btn.textContent = "🔎 Google 定位"; btn.disabled = false; }, 1500); return; }
+    addToCollection({
+      name: s.name, category: s.category, vibe_tags: s.vibe_tags,
+      date_score: s.date_score, reason: s.reason,
+      area: place.addr || s.location_hint || "",
+      lat: place.lat, lng: place.lng, mapUri: place.uri, rating: place.rating,
+    });
+    btn.textContent = "✓ 已定位收藏";
+  } catch (e) {
+    btn.textContent = "定位失敗"; setTimeout(() => { btn.textContent = "🔎 Google 定位"; btn.disabled = false; }, 1500);
+  }
+}
+
+// ============ 2. Google Places 找周邊 ============
+let myLat = null, myLng = null, kind = "cafe";
+const KIND_QUERY = { cafe: "咖啡廳", restaurant: "餐廳", park: "公園" };
+const KIND_TYPE = { cafe: "cafe", restaurant: "restaurant", park: "park" };
+
+function setKind(b) {
+  kind = b.dataset.kind;
+  document.querySelectorAll("#kindSeg button").forEach(x => x.classList.toggle("on", x === b));
+}
+
+function getLocation() {
+  const status = document.getElementById("locStatus");
+  if (!navigator.geolocation) { status.textContent = "此瀏覽器不支援定位"; return; }
+  status.textContent = "定位中…";
+  navigator.geolocation.getCurrentPosition(
+    pos => {
+      myLat = pos.coords.latitude; myLng = pos.coords.longitude;
+      status.innerHTML = `✅ 已定位（${myLat.toFixed(4)}, ${myLng.toFixed(4)}）`;
+    },
+    err => { status.textContent = "定位失敗：" + err.message + "（可改用地區關鍵字）"; },
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+}
+
+function haversine(lat1, lng1, lat2, lng2) {
+  const R = 6371000, toRad = d => d * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1))*Math.cos(toRad(lat2))*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// 共用：呼叫 /api/places，回傳整理過的地點陣列
+async function placesSearch(body) {
+  const res = await fetch("/api/places", {
+    method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error((data.error && data.error.message) || ("HTTP " + res.status));
+  return (data.places || []).map(p => ({
+    name: p.displayName ? p.displayName.text : "（無名稱）",
+    rating: p.rating, count: p.userRatingCount,
+    type: p.primaryTypeDisplayName ? p.primaryTypeDisplayName.text : "",
+    openNow: p.currentOpeningHours ? p.currentOpeningHours.openNow : undefined,
+    addr: p.formattedAddress || "",
+    lat: p.location.latitude, lng: p.location.longitude,
+    uri: p.googleMapsUri || `https://www.google.com/maps/search/?api=1&query=${p.location.latitude},${p.location.longitude}`,
+  }));
+}
+
+// 只取最相關的一筆（給「Google 定位」用）
+async function searchOnePlace(q) {
+  const body = { textQuery: q, languageCode: "zh-TW", maxResultCount: 1 };
+  if (myLat != null) body.locationBias = { circle: { center: { latitude: myLat, longitude: myLng }, radius: 20000 } };
+  const list = await placesSearch(body);
+  return list[0] || null;
+}
+
+let foundPlaces = [];
+
+function findPlaces() {
+  return document.getElementById("src").value === "google" ? findGoogle() : findOSM();
+}
+
+// 免費：OpenStreetMap（Overpass），需要先定位
+async function findOSM() {
+  const status = document.getElementById("findStatus");
+  const btn = document.getElementById("findBtn");
+  const radius = +document.getElementById("radius").value;
+  if (myLat == null) { status.textContent = "免費模式請先按上面「使用我目前的位置」定位。"; return; }
+  btn.disabled = true; status.textContent = "搜尋中…（OpenStreetMap）";
+  document.getElementById("placesList").innerHTML = "";
+  const filt = kind === "park" ? '["leisure"="park"]' : `["amenity"="${KIND_TYPE[kind]}"]`;
+  const q = `[out:json][timeout:25];(node${filt}(around:${radius},${myLat},${myLng});way${filt}(around:${radius},${myLat},${myLng}););out center 40;`;
+  try {
+    const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q) });
+    if (!res.ok) throw new Error("Overpass " + res.status);
+    const data = await res.json();
+    foundPlaces = (data.elements || []).filter(el => el.tags && el.tags.name).map(el => {
+      const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
+      const lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+      return {
+        name: el.tags.name, type: KIND_QUERY[kind],
+        addr: [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
+        lat, lng, uri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
+        dist: haversine(myLat, myLng, lat, lng),
+      };
+    }).sort((a, b) => a.dist - b.dist).slice(0, 30);
+    if (!foundPlaces.length) { status.textContent = "附近找不到，放寬範圍或換類型。"; return; }
+    status.textContent = `找到 ${foundPlaces.length} 個${KIND_QUERY[kind]}（OpenStreetMap，免費）`;
+    renderPlaces();
+  } catch (e) {
+    status.textContent = "搜尋失敗：" + e.message + "（Overpass 可能忙碌，稍後再試）";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// Google Places（需金鑰）
+async function findGoogle() {
+  const status = document.getElementById("findStatus");
+  const btn = document.getElementById("findBtn");
+  const radius = +document.getElementById("radius").value;
+  const areaQ = document.getElementById("area-q").value.trim();
+
+  if (myLat == null && !areaQ) { status.textContent = "請先定位，或輸入地區關鍵字。"; return; }
+
+  btn.disabled = true; status.textContent = "搜尋中…";
+  document.getElementById("placesList").innerHTML = "";
+  try {
+    const body = {
+      textQuery: (areaQ ? areaQ + " " : "") + KIND_QUERY[kind],
+      includedType: KIND_TYPE[kind],
+      languageCode: "zh-TW",
+      maxResultCount: 20,
+    };
+    if (myLat != null) {
+      body.rankPreference = "DISTANCE";
+      body.locationBias = { circle: { center: { latitude: myLat, longitude: myLng }, radius } };
+    }
+    foundPlaces = await placesSearch(body);
+    if (myLat != null) {
+      foundPlaces.forEach(p => p.dist = haversine(myLat, myLng, p.lat, p.lng));
+      foundPlaces.sort((a, b) => a.dist - b.dist);
+    }
+    if (!foundPlaces.length) { status.textContent = "找不到符合的地點，試著放寬範圍或換關鍵字。"; return; }
+    status.textContent = `找到 ${foundPlaces.length} 個${KIND_QUERY[kind]}`;
+    renderPlaces();
+  } catch (e) {
+    status.textContent = "搜尋失敗：" + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderPlaces() {
+  const el = document.getElementById("placesList");
+  if (!foundPlaces.length) { el.innerHTML = ""; return; }
+  el.innerHTML = foundPlaces.map((p, i) => {
+    const added = inCollection(p.name);
+    const distStr = p.dist != null ? (p.dist < 1000 ? Math.round(p.dist) + " m" : (p.dist/1000).toFixed(1) + " km") : "";
+    const ratingStr = p.rating ? `⭐ ${p.rating}${p.count ? `（${p.count}）` : ""}` : "";
+    const openTag = p.openNow === true ? `<span class="tag" style="background:#e3f4ea;color:var(--good)">營業中</span>`
+                  : p.openNow === false ? `<span class="tag" style="background:#fbe7e3;color:#c0392b">未營業</span>` : "";
+    return `
+      <div class="item">
+        <div class="top">
+          <span class="name"><a href="${esc(p.uri)}" target="_blank" rel="noopener">${esc(p.name)} ↗</a></span>
+          ${distStr ? `<span class="dist">${distStr}</span>` : ""}
+        </div>
+        <div class="meta">${ratingStr}${p.type ? (ratingStr ? " · " : "") + esc(p.type) : ""} ${openTag}</div>
+        ${p.addr ? `<div class="meta">${esc(p.addr)}</div>` : ""}
+        <div class="actions">
+          <button class="mini" onclick="addFound(${i})" ${added ? "disabled" : ""}>${added ? "✓ 已收藏" : "＋ 加入清單"}</button>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function addFound(i) {
+  const p = foundPlaces[i];
+  addToCollection({
+    name: p.name, category: KIND_QUERY[kind], vibe_tags: [],
+    rating: p.rating, area: p.addr, lat: p.lat, lng: p.lng, mapUri: p.uri,
+  });
+  renderPlaces();
+}
+
+// ============ 3. 收藏清單 + 排路線 ============
+function renderCollection() {
+  const el = document.getElementById("collectionList");
+  document.getElementById("count").textContent = collection.length ? `（${collection.length}）` : "";
+  document.getElementById("routeBtn").disabled = collection.length < 2;
+  if (!collection.length) { el.innerHTML = '<div class="empty">還沒有收藏。先在上面分析 IG 貼文，或搜尋周邊地點加入吧！</div>'; return; }
+  el.innerHTML = collection.map(c => {
+    const tags = (c.vibe_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+    const link = c.mapUri ? `<a href="${esc(c.mapUri)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:none">${esc(c.name)} ↗</a>` : esc(c.name);
+    return `
+      <div class="item">
+        <div class="top">
+          <span class="name">${link}</span>
+          <button class="del" onclick="removeFromCollection('${esc(c.name).replace(/'/g, "\\'")}')">移除</button>
+        </div>
+        <div class="meta">
+          <span class="tag cat">${esc(c.category || "其他")}</span>${tags}
+          ${c.date_score ? `<span class="score">${scoreStr(c.date_score)}</span>` : ""}
+        </div>
+        ${c.area ? `<div class="meta">${esc(c.area)}</div>` : ""}
+      </div>`;
+  }).join("");
+}
+
+async function planRoute() {
+  const status = document.getElementById("routeStatus");
+  const btn = document.getElementById("routeBtn");
+  if (collection.length < 2) { status.textContent = "至少收藏 2 個地點才能排路線。"; return; }
+
+  btn.disabled = true; status.textContent = "規劃路線中…";
+  const spots = collection.map(c => ({ name: c.name, category: c.category, area: c.area }));
+  try {
+    const res = await fetch("/api/analyze", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: "route", spots }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error((data.error && data.error.message) || ("HTTP " + res.status));
+    renderRoute(data);
+    status.textContent = "";
+  } catch (e) {
+    // 沒金鑰 → 用簡易節奏排序 + 地圖連結
+    renderRoute(heuristicRoute());
+    status.textContent = "（離線模式）已用基本約會節奏排序。設定 ANTHROPIC_API_KEY 可得到更貼心的規劃。";
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// 沒金鑰時的簡易路線：依分類排出開場→活動→用餐→收尾
+function heuristicRoute() {
+  const order = { "咖啡廳": 1, "展覽": 2, "市集": 2, "活動": 2, "景點": 4, "餐廳": 3, "公園": 4 };
+  const stops = [...collection].sort((a, b) => (order[a.category] || 3) - (order[b.category] || 3))
+    .map(c => ({ name: c.name, type: c.category || "地點", activity: "在這裡放鬆一下", duration: "約 1 小時", tip: "" }));
+  return { title: "你的約會路線", intro: "依約會的自然節奏為你排序。", stops, closing: "玩得開心！" };
+}
+
+function mapsDirUrl() {
+  // 有座標用座標，否則用名稱；起點若已定位則帶入
+  const pts = collection.map(c => (c.lat != null && c.lng != null) ? `${c.lat},${c.lng}` : c.name);
+  if (pts.length < 2) return null;
+  const destination = encodeURIComponent(pts[pts.length - 1]);
+  const waypoints = pts.slice(0, -1).map(encodeURIComponent).join("%7C");
+  let url = `https://www.google.com/maps/dir/?api=1&destination=${destination}&waypoints=${waypoints}&travelmode=walking`;
+  if (myLat != null) url += `&origin=${myLat},${myLng}`;
+  return url;
+}
+
+function renderRoute(r) {
+  const card = document.getElementById("routeCard");
+  const el = document.getElementById("routeResult");
+  card.style.display = "block";
+  const stops = (r.stops || []).map(s => `
+    <div class="route-stop">
+      <div><span class="rname">${esc(s.name)}</span><span class="rrole">${esc(s.type || "")}</span></div>
+      ${s.activity ? `<div class="rbody">${esc(s.activity)}${s.duration ? `　·　${esc(s.duration)}` : ""}</div>` : ""}
+      ${s.tip ? `<div class="rtip">💡 ${esc(s.tip)}</div>` : ""}
+    </div>`).join("");
+  const dir = mapsDirUrl();
+  el.innerHTML = `
+    <h3 style="margin:4px 0 0">${esc(r.title || "約會路線")}</h3>
+    ${r.intro ? `<div class="narr">${esc(r.intro)}</div>` : ""}
+    ${stops}
+    ${r.closing ? `<div class="narr">${esc(r.closing)}</div>` : ""}
+    ${dir ? `<a class="full" style="display:block;text-align:center;text-decoration:none;color:#fff;background:var(--accent);border-radius:10px;padding:11px 16px;font-weight:600;margin-top:14px" href="${dir}" target="_blank" rel="noopener">在 Google 地圖開啟路線導航 →</a>` : ""}`;
+  card.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+// ============ IG 監看精選（讀監看器 repo 的 feed.json） ============
+const IG_REPO = "satiqzj/ig-monitor";   // ← 你的 IG 監看器 repo（帳號/repo 名）
+const IG_BRANCH = "main";
+const IG_RAW = `https://raw.githubusercontent.com/${IG_REPO}/${IG_BRANCH}/`;
+let feedItems = [];
+
+async function loadFeed() {
+  const status = document.getElementById("feedStatus");
+  const btn = document.getElementById("feedBtn");
+  btn.disabled = true; status.textContent = "讀取中…";
+  try {
+    const res = await fetch(IG_RAW + "feed.json?t=" + Date.now());
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    feedItems = await res.json();
+    status.textContent = feedItems.length ? `共 ${feedItems.length} 則（依時間排序）` : "監看器還沒有資料，先讓它跑一次。";
+    renderFeed();
+  } catch (e) {
+    status.textContent = "讀不到 feed（監看器還沒跑過、或 IG_REPO 設定要調整）：" + e.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function feedName(it) { return it.place || ("@" + it.handle); }
+
+function renderFeed() {
+  const el = document.getElementById("feedList");
+  if (!feedItems.length) { el.innerHTML = ""; return; }
+  el.innerHTML = feedItems.map((it, i) => {
+    const name = feedName(it);
+    const added = inCollection(name);
+    const tags = (it.vibe_tags || []).map(t => `<span class="tag">${esc(t)}</span>`).join("");
+    const img = it.image ? `<img src="${esc(IG_RAW + it.image)}" alt="" loading="lazy" style="width:84px;height:84px;object-fit:cover;border-radius:10px;flex:0 0 auto">` : "";
+    return `
+      <div class="item" style="display:flex;gap:12px">
+        ${img}
+        <div style="flex:1;min-width:0">
+          <div class="top">
+            <span class="name">${esc(name)}</span>
+            ${it.date_score != null ? `<span class="score">${scoreStr(it.date_score)}</span>` : ""}
+          </div>
+          <div class="meta"><span class="tag cat">${esc(it.category || "其他")}</span>${tags}</div>
+          ${it.summary ? `<div class="reason">${esc(it.summary)}</div>` : ""}
+          <div class="actions">
+            <button class="mini" onclick="addFeedItem(${i})" ${added ? "disabled" : ""}>${added ? "✓ 已收藏" : "＋ 加入清單"}</button>
+            <button class="mini ghost" onclick="locateFeed(${i}, this)">🔎 Google 定位</button>
+            ${it.postUrl ? `<a class="mini ghost" style="text-decoration:none;display:inline-block" href="${esc(it.postUrl)}" target="_blank" rel="noopener">看原貼文 ↗</a>` : ""}
+          </div>
+        </div>
+      </div>`;
+  }).join("");
+}
+
+function feedToSpot(it, extra) {
+  return Object.assign({
+    name: feedName(it), category: it.category, vibe_tags: it.vibe_tags,
+    date_score: it.date_score, reason: it.summary, area: "",
+  }, extra || {});
+}
+
+function addFeedItem(i) {
+  addToCollection(feedToSpot(feedItems[i]));
+  renderFeed();
+}
+
+async function locateFeed(i, btn) {
+  const it = feedItems[i];
+  btn.disabled = true; btn.textContent = "定位中…";
+  try {
+    const place = await searchOnePlace(feedName(it));
+    if (!place) { btn.textContent = "找不到"; setTimeout(() => { btn.textContent = "🔎 Google 定位"; btn.disabled = false; }, 1500); return; }
+    addToCollection(feedToSpot(it, { area: place.addr || "", lat: place.lat, lng: place.lng, mapUri: place.uri, rating: place.rating }));
+    btn.textContent = "✓ 已定位收藏";
+  } catch (e) {
+    btn.textContent = "定位失敗"; setTimeout(() => { btn.textContent = "🔎 Google 定位"; btn.disabled = false; }, 1500);
+  }
+}
+
+// 初始
+renderCollection();
+loadFeed();
+</script>
+</body>
+</html>

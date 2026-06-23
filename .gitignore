@@ -1,0 +1,6 @@
+# 金鑰：只放本機，永不進版控
+key.txt
+anthropic_key.txt
+node_modules/
+.vercel
+.DS_Store
