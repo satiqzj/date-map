@@ -7,17 +7,18 @@
 <style>
   :root {
     color-scheme: dark;
-    --bg: #15121a;
-    --card: #211b29;
-    --ink: #efe7f2;
-    --muted: #9a8fa8;
-    --accent: #e86aa3;
-    --accent-soft: #3a2331;
-    --line: #352c40;
-    --good: #56c08a;
-    --gold: #e6b552;
-    --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
-    --field: #1b1622;
+    --bg: #1a1714;
+    --card: #24201b;
+    --ink: #f0e9e0;
+    --muted: #a89e90;
+    --accent: #f5a623;
+    --accent-soft: #3a2e1c;
+    --line: #352f27;
+    --good: #6cbf73;
+    --gold: #f5c451;
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+    --field: #1f1b16;
+    --on-accent: #2a1c06;
   }
   * { box-sizing: border-box; }
   body {
@@ -51,7 +52,7 @@
   button {
     cursor: pointer; border: none; border-radius: 10px; padding: 11px 16px;
     font-size: 14px; font-weight: 600; font-family: inherit;
-    background: var(--accent); color: #fff; transition: filter .15s;
+    background: var(--accent); color: var(--on-accent); transition: filter .15s;
   }
   button:hover { filter: brightness(1.05); }
   button:disabled { opacity: .55; cursor: not-allowed; }
@@ -60,7 +61,7 @@
   .full { width: 100%; margin-top: 14px; }
   .seg { display: flex; gap: 8px; margin-top: 4px; }
   .seg button { flex: 1; background: var(--accent-soft); color: var(--accent); }
-  .seg button.on { background: var(--accent); color: #fff; }
+  .seg button.on { background: var(--accent); color: var(--on-accent); }
   .item {
     border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
     margin-top: 10px; background: var(--field);
@@ -70,12 +71,12 @@
   .item .name a { color: var(--ink); text-decoration: none; }
   .item .name a:hover { color: var(--accent); }
   .item .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .item .reason { font-size: 13px; margin-top: 5px; color: #c2b8ce; }
+  .item .reason { font-size: 13px; margin-top: 5px; color: #c9bca8; }
   .tag {
     display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
     background: var(--accent-soft); color: var(--accent); margin-right: 6px; margin-top: 4px;
   }
-  .tag.cat { background: #2b2436; color: #b6a6c8; }
+  .tag.cat { background: #322a20; color: #cbb79a; }
   .score { font-weight: 700; font-size: 13px; color: var(--gold); white-space: nowrap; }
   .dist { color: var(--good); font-weight: 600; font-size: 12px; white-space: nowrap; }
   .actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -90,7 +91,7 @@
   }
   .route-stop .rname { font-weight: 700; }
   .route-stop .rrole { font-size: 11px; color: var(--accent); margin-left: 6px; }
-  .route-stop .rbody { font-size: 13px; color: #c2b8ce; margin-top: 2px; }
+  .route-stop .rbody { font-size: 13px; color: #c9bca8; margin-top: 2px; }
   .route-stop .rtip { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .narr { font-size: 13.5px; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 16px 32px; }
@@ -566,7 +567,7 @@ function renderRoute(r) {
     ${r.intro ? `<div class="narr">${esc(r.intro)}</div>` : ""}
     ${stops}
     ${r.closing ? `<div class="narr">${esc(r.closing)}</div>` : ""}
-    ${dir ? `<a class="full" style="display:block;text-align:center;text-decoration:none;color:#fff;background:var(--accent);border-radius:10px;padding:11px 16px;font-weight:600;margin-top:14px" href="${dir}" target="_blank" rel="noopener">在 Google 地圖開啟路線導航 →</a>` : ""}`;
+    ${dir ? `<a class="full" style="display:block;text-align:center;text-decoration:none;color:var(--on-accent);background:var(--accent);border-radius:10px;padding:11px 16px;font-weight:600;margin-top:14px" href="${dir}" target="_blank" rel="noopener">在 Google 地圖開啟路線導航 →</a>` : ""}`;
   card.scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
