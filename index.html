@@ -6,16 +6,18 @@
 <title>約會地圖 · IG 地點蒐集 + 路線規劃</title>
 <style>
   :root {
-    --bg: #fbf6f7;
-    --card: #ffffff;
-    --ink: #2c2730;
-    --muted: #8d8390;
-    --accent: #d4548a;
-    --accent-soft: #fdeaf1;
-    --line: #efe6ea;
-    --good: #3e9c6a;
-    --gold: #e0a93b;
-    --shadow: 0 4px 18px rgba(70, 40, 55, 0.08);
+    color-scheme: dark;
+    --bg: #15121a;
+    --card: #211b29;
+    --ink: #efe7f2;
+    --muted: #9a8fa8;
+    --accent: #e86aa3;
+    --accent-soft: #3a2331;
+    --line: #352c40;
+    --good: #56c08a;
+    --gold: #e6b552;
+    --shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    --field: #1b1622;
   }
   * { box-sizing: border-box; }
   body {
@@ -40,7 +42,7 @@
   label { display: block; font-size: 13px; color: var(--muted); margin: 10px 0 4px; }
   input, select, textarea {
     width: 100%; padding: 10px 12px; border: 1px solid var(--line);
-    border-radius: 10px; font-size: 14px; font-family: inherit; background: #fff; color: var(--ink);
+    border-radius: 10px; font-size: 14px; font-family: inherit; background: var(--field); color: var(--ink);
   }
   input:focus, select:focus, textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
   textarea { resize: vertical; min-height: 110px; }
@@ -61,19 +63,19 @@
   .seg button.on { background: var(--accent); color: #fff; }
   .item {
     border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px;
-    margin-top: 10px; background: #fffdfe;
+    margin-top: 10px; background: var(--field);
   }
   .item .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
   .item .name { font-weight: 700; font-size: 15px; }
   .item .name a { color: var(--ink); text-decoration: none; }
   .item .name a:hover { color: var(--accent); }
   .item .meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
-  .item .reason { font-size: 13px; margin-top: 5px; color: #5a5460; }
+  .item .reason { font-size: 13px; margin-top: 5px; color: #c2b8ce; }
   .tag {
     display: inline-block; font-size: 11px; padding: 2px 8px; border-radius: 999px;
     background: var(--accent-soft); color: var(--accent); margin-right: 6px; margin-top: 4px;
   }
-  .tag.cat { background: #eef0f5; color: #5d6b88; }
+  .tag.cat { background: #2b2436; color: #b6a6c8; }
   .score { font-weight: 700; font-size: 13px; color: var(--gold); white-space: nowrap; }
   .dist { color: var(--good); font-weight: 600; font-size: 12px; white-space: nowrap; }
   .actions { margin-top: 8px; display: flex; gap: 6px; flex-wrap: wrap; }
@@ -88,7 +90,7 @@
   }
   .route-stop .rname { font-weight: 700; }
   .route-stop .rrole { font-size: 11px; color: var(--accent); margin-left: 6px; }
-  .route-stop .rbody { font-size: 13px; color: #5a5460; margin-top: 2px; }
+  .route-stop .rbody { font-size: 13px; color: #c2b8ce; margin-top: 2px; }
   .route-stop .rtip { font-size: 12px; color: var(--muted); margin-top: 2px; }
   .narr { font-size: 13.5px; background: var(--accent-soft); border-radius: 10px; padding: 10px 12px; margin: 10px 0; }
   footer { text-align: center; color: var(--muted); font-size: 12px; padding: 8px 16px 32px; }
@@ -454,8 +456,8 @@ function renderPlaces() {
     const added = inCollection(p.name);
     const distStr = p.dist != null ? (p.dist < 1000 ? Math.round(p.dist) + " m" : (p.dist/1000).toFixed(1) + " km") : "";
     const ratingStr = p.rating ? `⭐ ${p.rating}${p.count ? `（${p.count}）` : ""}` : "";
-    const openTag = p.openNow === true ? `<span class="tag" style="background:#e3f4ea;color:var(--good)">營業中</span>`
-                  : p.openNow === false ? `<span class="tag" style="background:#fbe7e3;color:#c0392b">未營業</span>` : "";
+    const openTag = p.openNow === true ? `<span class="tag" style="background:rgba(86,192,138,.18);color:var(--good)">營業中</span>`
+                  : p.openNow === false ? `<span class="tag" style="background:rgba(232,107,107,.18);color:#f08a8a">未營業</span>` : "";
     return `
       <div class="item">
         <div class="top">
