@@ -437,6 +437,20 @@ async function overpassFetch(q) {
   throw lastErr || new Error("所有 Overpass 伺服器都連不上");
 }
 
+// 用幾何點算多邊形面積（平方公尺），等距投影近似，足夠用來判斷公園大小
+function polygonAreaM2(coords) {
+  if (!coords || coords.length < 3) return 0;
+  const R = 6378137, toRad = d => d * Math.PI / 180;
+  const lat0 = toRad(coords[0].lat);
+  const pts = coords.map(c => ({ x: toRad(c.lon) * Math.cos(lat0) * R, y: toRad(c.lat) * R }));
+  let area = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const j = (i + 1) % pts.length;
+    area += pts[i].x * pts[j].y - pts[j].x * pts[i].y;
+  }
+  return Math.abs(area / 2);
+}
+
 let foundPlaces = [];
 
 function findPlaces() {
@@ -456,21 +470,35 @@ async function findOSM() {
   const PARK_ZH = { park: "公園", garden: "花園", nature_reserve: "自然保護區", dog_park: "狗狗公園" };
   const filters = kind === "park" ? PARK_FILTERS : [`["amenity"="${KIND_TYPE[kind]}"]`];
   const around = `(around:${radius},${ctr.lat},${ctr.lng})`;
-  const q = `[out:json][timeout:25];(${filters.map(f => `node${f}${around};way${f}${around};`).join("")});out center 60;`;
+  const q = `[out:json][timeout:25];(${filters.map(f => `node${f}${around};way${f}${around};`).join("")});out geom 80;`;
   try {
     const data = await overpassFetch(q);
+    const MIN_PARK_AREA = 4000;   // 小於約 4000㎡ 的綠帶視為「不像樣」，濾掉
     foundPlaces = (data.elements || []).filter(el => el.tags && el.tags.name).map(el => {
-      const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
-      const lng = el.lon != null ? el.lon : (el.center && el.center.lon);
+      let lat, lng, areaM2 = null;
+      if (el.type === "node") { lat = el.lat; lng = el.lon; }
+      else {
+        if (el.bounds) { lat = (el.bounds.minlat + el.bounds.maxlat) / 2; lng = (el.bounds.minlon + el.bounds.maxlon) / 2; }
+        if (el.geometry && el.geometry.length) {
+          if (lat == null) { lat = el.geometry[0].lat; lng = el.geometry[0].lon; }
+          areaM2 = polygonAreaM2(el.geometry);
+        }
+      }
+      const lz = el.tags.leisure;
+      const keep = kind !== "park"
+        || lz === "dog_park" || lz === "nature_reserve"   // 這兩類一律保留
+        || (areaM2 != null && areaM2 >= MIN_PARK_AREA);    // 其餘需有足夠面積
       return {
         name: el.tags.name,
-        type: PARK_ZH[el.tags.leisure] || (el.tags.landuse === "recreation_ground" ? "休憩綠地" : KIND_QUERY[kind]),
+        type: PARK_ZH[lz] || (el.tags.landuse === "recreation_ground" ? "休憩綠地" : KIND_QUERY[kind]),
+        areaHa: areaM2 ? (areaM2 / 10000).toFixed(areaM2 < 100000 ? 2 : 1) : "",
         addr: [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
         lat, lng, uri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
         dist: haversine(ctr.lat, ctr.lng, lat, lng),
+        _keep: keep,
       };
-    }).sort((a, b) => a.dist - b.dist).slice(0, 30);
-    if (!foundPlaces.length) { status.textContent = "附近找不到，放寬範圍或換類型。"; return; }
+    }).filter(p => p._keep && p.lat != null).sort((a, b) => a.dist - b.dist).slice(0, 30);
+    if (!foundPlaces.length) { status.textContent = kind === "park" ? "附近沒有夠大的公園（已濾掉小綠帶），把搜尋範圍拉大試試。" : "附近找不到，放寬範圍或換類型。"; return; }
     status.textContent = `找到 ${foundPlaces.length} 個${KIND_QUERY[kind]}（OpenStreetMap，免費）`;
     renderPlaces();
   } catch (e) {
@@ -533,7 +561,7 @@ function renderPlaces() {
           <span class="name"><a href="${esc(p.uri)}" target="_blank" rel="noopener">${esc(p.name)} ↗</a></span>
           ${distStr ? `<span class="dist">${distStr}</span>` : ""}
         </div>
-        <div class="meta">${ratingStr}${p.type ? (ratingStr ? " · " : "") + esc(p.type) : ""} ${openTag}</div>
+        <div class="meta">${ratingStr}${p.type ? (ratingStr ? " · " : "") + esc(p.type) : ""}${p.areaHa ? " · " + p.areaHa + " 公頃" : ""} ${openTag}</div>
         ${p.addr ? `<div class="meta">${esc(p.addr)}</div>` : ""}
         <div class="actions">
           <button class="mini" onclick="addFound(${i})" ${added ? "disabled" : ""}>${added ? "✓ 已收藏" : "＋ 加入清單"}</button>
