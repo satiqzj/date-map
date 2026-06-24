@@ -318,6 +318,7 @@ async function locateAnalyzed(i, btn) {
 
 // ============ 2. Google Places 找周邊 ============
 let myLat = null, myLng = null, kind = "cafe";
+let searchCenter = null;   // {lat,lng,name}：以清單某地點為中心搜尋（null = 用目前位置）
 const KIND_QUERY = { cafe: "咖啡廳", restaurant: "餐廳", park: "公園" };
 const KIND_TYPE = { cafe: "cafe", restaurant: "restaurant", park: "park" };
 
@@ -333,6 +334,7 @@ function getLocation() {
   navigator.geolocation.getCurrentPosition(
     pos => {
       myLat = pos.coords.latitude; myLng = pos.coords.longitude;
+      searchCenter = null;   // 用目前位置，取消「以清單地點為中心」
       status.innerHTML = `✅ 已定位（${myLat.toFixed(4)}, ${myLng.toFixed(4)}）`;
     },
     err => { status.textContent = "定位失敗：" + err.message + "（可改用地區關鍵字）"; },
@@ -373,6 +375,36 @@ async function searchOnePlace(q) {
   return list[0] || null;
 }
 
+// 免費地理編碼（OpenStreetMap Nominatim）：把地點名稱轉成座標
+async function geocode(query) {
+  const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`, { headers: { "Accept": "application/json" } });
+  if (!res.ok) throw new Error("geocode " + res.status);
+  const arr = await res.json();
+  if (!arr.length) return null;
+  return { lat: +arr[0].lat, lng: +arr[0].lon };
+}
+
+// 以清單裡某個地點為中心，搜尋它附近的餐廳/公園
+async function centerOnSpot(name) {
+  const spot = collection.find(c => c.name === name);
+  if (!spot) return;
+  const findStatus = document.getElementById("findStatus");
+  let lat = spot.lat, lng = spot.lng;
+  if (lat == null || lng == null) {
+    findStatus.textContent = `定位「${name}」中…`;
+    try {
+      const g = await geocode(spot.area ? `${name} ${spot.area}` : name);
+      if (!g) { findStatus.textContent = `找不到「${name}」的座標 — 可在下方「地區關鍵字」補上城市（如 Bangkok）再按一次，或用「使用我目前的位置」。`; return; }
+      lat = g.lat; lng = g.lng;
+      spot.lat = lat; spot.lng = lng; save();   // 記起來，下次不用再查
+    } catch (e) { findStatus.textContent = "定位失敗：" + e.message; return; }
+  }
+  searchCenter = { lat, lng, name };
+  document.getElementById("locStatus").innerHTML = `🎯 以「${esc(name)}」為中心搜尋`;
+  findStatus.textContent = `已鎖定「${name}」為中心，選類型後按「搜尋」。`;
+  document.getElementById("kindSeg").scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
 let foundPlaces = [];
 
 function findPlaces() {
@@ -384,11 +416,12 @@ async function findOSM() {
   const status = document.getElementById("findStatus");
   const btn = document.getElementById("findBtn");
   const radius = +document.getElementById("radius").value;
-  if (myLat == null) { status.textContent = "免費模式請先按上面「使用我目前的位置」定位。"; return; }
-  btn.disabled = true; status.textContent = "搜尋中…（OpenStreetMap）";
+  const ctr = searchCenter || (myLat != null ? { lat: myLat, lng: myLng } : null);
+  if (!ctr) { status.textContent = "請先按「使用我目前的位置」，或在清單某地點按「📍 找這附近」。"; return; }
+  btn.disabled = true; status.textContent = `搜尋中…（OpenStreetMap${searchCenter ? "，以「" + searchCenter.name + "」為中心" : ""}）`;
   document.getElementById("placesList").innerHTML = "";
   const filt = kind === "park" ? '["leisure"="park"]' : `["amenity"="${KIND_TYPE[kind]}"]`;
-  const q = `[out:json][timeout:25];(node${filt}(around:${radius},${myLat},${myLng});way${filt}(around:${radius},${myLat},${myLng}););out center 40;`;
+  const q = `[out:json][timeout:25];(node${filt}(around:${radius},${ctr.lat},${ctr.lng});way${filt}(around:${radius},${ctr.lat},${ctr.lng}););out center 40;`;
   try {
     const res = await fetch("https://overpass-api.de/api/interpreter", { method: "POST", body: "data=" + encodeURIComponent(q) });
     if (!res.ok) throw new Error("Overpass " + res.status);
@@ -400,7 +433,7 @@ async function findOSM() {
         name: el.tags.name, type: KIND_QUERY[kind],
         addr: [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
         lat, lng, uri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
-        dist: haversine(myLat, myLng, lat, lng),
+        dist: haversine(ctr.lat, ctr.lng, lat, lng),
       };
     }).sort((a, b) => a.dist - b.dist).slice(0, 30);
     if (!foundPlaces.length) { status.textContent = "附近找不到，放寬範圍或換類型。"; return; }
@@ -420,7 +453,8 @@ async function findGoogle() {
   const radius = +document.getElementById("radius").value;
   const areaQ = document.getElementById("area-q").value.trim();
 
-  if (myLat == null && !areaQ) { status.textContent = "請先定位，或輸入地區關鍵字。"; return; }
+  const ctr = searchCenter || (myLat != null ? { lat: myLat, lng: myLng } : null);
+  if (!ctr && !areaQ) { status.textContent = "請先定位、在清單某地點按「📍 找這附近」，或輸入地區關鍵字。"; return; }
 
   btn.disabled = true; status.textContent = "搜尋中…";
   document.getElementById("placesList").innerHTML = "";
@@ -431,13 +465,13 @@ async function findGoogle() {
       languageCode: "zh-TW",
       maxResultCount: 20,
     };
-    if (myLat != null) {
+    if (ctr) {
       body.rankPreference = "DISTANCE";
-      body.locationBias = { circle: { center: { latitude: myLat, longitude: myLng }, radius } };
+      body.locationBias = { circle: { center: { latitude: ctr.lat, longitude: ctr.lng }, radius } };
     }
     foundPlaces = await placesSearch(body);
-    if (myLat != null) {
-      foundPlaces.forEach(p => p.dist = haversine(myLat, myLng, p.lat, p.lng));
+    if (ctr) {
+      foundPlaces.forEach(p => p.dist = haversine(ctr.lat, ctr.lng, p.lat, p.lng));
       foundPlaces.sort((a, b) => a.dist - b.dist);
     }
     if (!foundPlaces.length) { status.textContent = "找不到符合的地點，試著放寬範圍或換關鍵字。"; return; }
@@ -503,6 +537,9 @@ function renderCollection() {
           ${c.date_score ? `<span class="score">${scoreStr(c.date_score)}</span>` : ""}
         </div>
         ${c.area ? `<div class="meta">${esc(c.area)}</div>` : ""}
+        <div class="actions">
+          <button class="mini ghost" onclick="centerOnSpot('${esc(c.name).replace(/'/g, "\\'")}')">📍 找這附近</button>
+        </div>
       </div>`;
   }).join("");
 }
