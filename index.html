@@ -147,7 +147,7 @@
       <button data-kind="park" onclick="setKind(this)">🌳 公園</button>
     </div>
     <label>搜尋範圍：<span id="radiusLabel">1.5</span> 公里</label>
-    <input id="radius" type="range" min="300" max="5000" step="100" value="1500"
+    <input id="radius" type="range" min="300" max="10000" step="100" value="1500"
            oninput="document.getElementById('radiusLabel').textContent=(this.value/1000).toFixed(1)">
     <button class="full" id="findBtn" onclick="findPlaces()">搜尋</button>
     <div class="status" id="findStatus"></div>
