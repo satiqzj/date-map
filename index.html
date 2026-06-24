@@ -452,15 +452,19 @@ async function findOSM() {
   if (!ctr) { status.textContent = "請先按「使用我目前的位置」，或在清單某地點按「📍 找這附近」。"; return; }
   btn.disabled = true; status.textContent = `搜尋中…（OpenStreetMap${searchCenter ? "，以「" + searchCenter.name + "」為中心" : ""}）`;
   document.getElementById("placesList").innerHTML = "";
-  const filt = kind === "park" ? '["leisure"="park"]' : `["amenity"="${KIND_TYPE[kind]}"]`;
-  const q = `[out:json][timeout:25];(node${filt}(around:${radius},${ctr.lat},${ctr.lng});way${filt}(around:${radius},${ctr.lat},${ctr.lng}););out center 40;`;
+  const PARK_FILTERS = ['["leisure"="park"]', '["leisure"="garden"]', '["leisure"="nature_reserve"]', '["leisure"="dog_park"]', '["landuse"="recreation_ground"]'];
+  const PARK_ZH = { park: "公園", garden: "花園", nature_reserve: "自然保護區", dog_park: "狗狗公園" };
+  const filters = kind === "park" ? PARK_FILTERS : [`["amenity"="${KIND_TYPE[kind]}"]`];
+  const around = `(around:${radius},${ctr.lat},${ctr.lng})`;
+  const q = `[out:json][timeout:25];(${filters.map(f => `node${f}${around};way${f}${around};`).join("")});out center 60;`;
   try {
     const data = await overpassFetch(q);
     foundPlaces = (data.elements || []).filter(el => el.tags && el.tags.name).map(el => {
       const lat = el.lat != null ? el.lat : (el.center && el.center.lat);
       const lng = el.lon != null ? el.lon : (el.center && el.center.lon);
       return {
-        name: el.tags.name, type: KIND_QUERY[kind],
+        name: el.tags.name,
+        type: PARK_ZH[el.tags.leisure] || (el.tags.landuse === "recreation_ground" ? "休憩綠地" : KIND_QUERY[kind]),
         addr: [el.tags["addr:street"], el.tags["addr:housenumber"]].filter(Boolean).join(" "),
         lat, lng, uri: `https://www.google.com/maps/search/?api=1&query=${lat},${lng}`,
         dist: haversine(ctr.lat, ctr.lng, lat, lng),
