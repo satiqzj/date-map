@@ -466,14 +466,14 @@ async function findOSM() {
   if (!ctr) { status.textContent = "請先按「使用我目前的位置」，或在清單某地點按「📍 找這附近」。"; return; }
   btn.disabled = true; status.textContent = `搜尋中…（OpenStreetMap${searchCenter ? "，以「" + searchCenter.name + "」為中心" : ""}）`;
   document.getElementById("placesList").innerHTML = "";
-  const PARK_FILTERS = ['["leisure"="park"]', '["leisure"="garden"]', '["leisure"="nature_reserve"]', '["leisure"="dog_park"]', '["landuse"="recreation_ground"]'];
-  const PARK_ZH = { park: "公園", garden: "花園", nature_reserve: "自然保護區", dog_park: "狗狗公園" };
+  const PARK_FILTERS = ['["leisure"="park"]', '["leisure"="nature_reserve"]', '["leisure"="dog_park"]', '["landuse"="recreation_ground"]'];
+  const PARK_ZH = { park: "公園", nature_reserve: "自然保護區", dog_park: "狗狗公園" };
   const filters = kind === "park" ? PARK_FILTERS : [`["amenity"="${KIND_TYPE[kind]}"]`];
   const around = `(around:${radius},${ctr.lat},${ctr.lng})`;
   const q = `[out:json][timeout:25];(${filters.map(f => `node${f}${around};way${f}${around};`).join("")});out geom 80;`;
   try {
     const data = await overpassFetch(q);
-    const MIN_PARK_AREA = 4000;   // 小於約 4000㎡ 的綠帶視為「不像樣」，濾掉
+    const MIN_PARK_AREA = 6000;   // 小於約 6000㎡ 的綠帶/小花園視為「不像樣」，濾掉
     foundPlaces = (data.elements || []).filter(el => el.tags && el.tags.name).map(el => {
       let lat, lng, areaM2 = null;
       if (el.type === "node") { lat = el.lat; lng = el.lon; }
@@ -485,9 +485,10 @@ async function findOSM() {
         }
       }
       const lz = el.tags.leisure;
-      const keep = kind !== "park"
+      const priv = ["private", "no", "customers", "residents"].includes(el.tags.access);   // 私人/住戶限定 → 排除
+      const keep = !priv && (kind !== "park"
         || lz === "dog_park" || lz === "nature_reserve"   // 這兩類一律保留
-        || (areaM2 != null && areaM2 >= MIN_PARK_AREA);    // 其餘需有足夠面積
+        || (areaM2 != null && areaM2 >= MIN_PARK_AREA));   // 其餘需有足夠面積
       return {
         name: el.tags.name,
         type: PARK_ZH[lz] || (el.tags.landuse === "recreation_ground" ? "休憩綠地" : KIND_QUERY[kind]),
